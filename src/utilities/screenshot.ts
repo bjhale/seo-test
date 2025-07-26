@@ -35,6 +35,24 @@ export async function takeElementScreenshot(
     // Wait for scroll to complete
     await new Promise(resolve => setTimeout(resolve, waitTime));
 
+    // Check if element is visible before taking screenshot
+    const isVisible = await page.evaluate(el => {
+      const rect = el.getBoundingClientRect();
+      const style = window.getComputedStyle(el);
+
+      return (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        style.visibility !== 'hidden' &&
+        style.display !== 'none' &&
+        style.opacity !== '0'
+      );
+    }, element);
+
+    if (!isVisible) {
+      throw new Error('Element is not visible');
+    }
+
     // Get element's position and create a clip region manually
     const elementInfo = await page.evaluate(el => {
       const rect = el.getBoundingClientRect();
@@ -64,8 +82,26 @@ export async function takeElementScreenshot(
     return `data:image/png;base64,${screenshot}`;
   } catch (error) {
     console.warn(`Could not take element screenshot: ${error}`);
-    // Fallback to element screenshot without context
+    // Fallback to element screenshot without context, but only if element is visible
     try {
+      const isVisible = await page.evaluate(el => {
+        const rect = el.getBoundingClientRect();
+        const style = window.getComputedStyle(el);
+
+        return (
+          rect.width > 0 &&
+          rect.height > 0 &&
+          style.visibility !== 'hidden' &&
+          style.display !== 'none' &&
+          style.opacity !== '0'
+        );
+      }, element);
+
+      if (!isVisible) {
+        console.warn('Element is not visible, skipping fallback screenshot');
+        return null;
+      }
+
       const fallbackScreenshot = await element.screenshot({
         encoding: 'base64',
         type: 'png',
