@@ -57,8 +57,6 @@ export default async function evaluateUrl(url: string): Promise<EvaluationResult
     }),
   );
 
-  console.log('Heading Structure:', headingStructure);
-
   // Check for multiple H1 tags
   const h1Count = headingStructure.filter(h => h.tag === 'H1').length;
   if (h1Count > 1) {
@@ -131,7 +129,10 @@ export default async function evaluateUrl(url: string): Promise<EvaluationResult
     }
 
     console.error('Error: Found out of order headings.');
-    console.error('Out of Order Headings:', outOfOrder);
+    console.error(
+      'Out of Order Headings:',
+      outOfOrder.map(h => `${h.tag}: "${h.text}"`),
+    );
   } else {
     tests.push({
       title: 'Heading Order',
