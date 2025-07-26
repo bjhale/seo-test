@@ -32,7 +32,6 @@ export class SEOReportGenerator {
     // Create reports directory if it doesn't exist
     try {
       mkdirSync(this.reportDir, { recursive: true });
-      mkdirSync(join(this.reportDir, 'screenshots'), { recursive: true });
     } catch (error) {
       // Directory might already exist
     }
@@ -206,8 +205,8 @@ export class SEOReportGenerator {
       reportFilename: 'seo-report',
       reportTitle: 'SEO Analysis Report',
       reportPageTitle: 'SEO Test Results',
-      inline: false,
-      inlineAssets: false,
+      inline: true,
+      inlineAssets: true,
       cdn: false,
       charts: true,
       enableCharts: true,

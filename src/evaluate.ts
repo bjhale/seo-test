@@ -12,10 +12,7 @@ interface EvaluationResult {
   timestamp: string;
 }
 
-export default async function evaluateUrl(
-  url: string,
-  screenshotDir: string = 'reports/screenshots',
-): Promise<EvaluationResult> {
+export default async function evaluateUrl(url: string): Promise<EvaluationResult> {
   const tests: SEOTest[] = [];
   const timestamp = new Date().toISOString();
 
