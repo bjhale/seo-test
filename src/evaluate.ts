@@ -3,6 +3,7 @@ import * as cheerio from 'cheerio';
 import { writeFileSync } from 'fs';
 import { join } from 'path';
 import { SEOTest } from './report-generator.js';
+import { takeElementScreenshot, takeFullPageScreenshot } from './utilities/screenshot.js';
 
 interface EvaluationResult {
   url: string;
@@ -43,12 +44,7 @@ export default async function evaluateUrl(
   }
 
   // Take screenshot as base64
-  const screenshotBase64 = await page.screenshot({
-    encoding: 'base64',
-    fullPage: true,
-    type: 'png',
-  });
-  const screenshotDataUrl = `data:image/png;base64,${screenshotBase64}`;
+  const screenshotDataUrl = await takeFullPageScreenshot(page);
 
   const $ = cheerio.load(await response?.text());
 
@@ -74,28 +70,9 @@ export default async function evaluateUrl(
     // Take individual screenshots of each H1 tag
     for (let i = 0; i < h1Tags.length; i++) {
       const h1Element = h1Tags[i];
-      let elementScreenshotDataUrl = null;
 
-      try {
-        // Scroll the element into view and take a screenshot
-        await page.evaluate(el => {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, h1Element.element);
-
-        // Wait a moment for scroll to complete
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Take screenshot of the element with some context
-        const elementScreenshot = await h1Element.element.screenshot({
-          encoding: 'base64',
-          type: 'png',
-        });
-        elementScreenshotDataUrl = `data:image/png;base64,${elementScreenshot}`;
-      } catch (screenshotError) {
-        console.warn(`Could not take screenshot of H1 element ${i + 1}: ${screenshotError}`);
-        // No screenshot will be included
-        elementScreenshotDataUrl = null;
-      }
+      // Take screenshot of the H1 element
+      const elementScreenshotDataUrl = await takeElementScreenshot(page, h1Element.element);
 
       const testResult: any = {
         title: `H1 Tag ${i + 1} of ${h1Count}: "${h1Element.text}"`,
@@ -138,28 +115,9 @@ export default async function evaluateUrl(
     // Take individual screenshots of each out of order heading
     for (let i = 0; i < outOfOrder.length; i++) {
       const outOfOrderHeading = outOfOrder[i];
-      let elementScreenshotDataUrl = null;
 
-      try {
-        // Scroll the element into view and take a screenshot
-        await page.evaluate(el => {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, outOfOrderHeading.element);
-
-        // Wait a moment for scroll to complete
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Take screenshot of the element with some context
-        const elementScreenshot = await outOfOrderHeading.element.screenshot({
-          encoding: 'base64',
-          type: 'png',
-        });
-        elementScreenshotDataUrl = `data:image/png;base64,${elementScreenshot}`;
-      } catch (screenshotError) {
-        console.warn(`Could not take screenshot of out of order heading ${i + 1}: ${screenshotError}`);
-        // No screenshot will be included
-        elementScreenshotDataUrl = null;
-      }
+      // Take screenshot of the out of order heading element
+      const elementScreenshotDataUrl = await takeElementScreenshot(page, outOfOrderHeading.element);
 
       const testResult: any = {
         title: `Out of Order Heading ${i + 1} of ${outOfOrder.length}: ${outOfOrderHeading.tag} "${outOfOrderHeading.text}"`,
