@@ -5,6 +5,7 @@ import { hideBin } from 'yargs/helpers';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import puppeteer from 'puppeteer';
 import evaluateUrl from './evaluate.js';
 import { crawlSite } from './crawler.js';
 import { SEOReportGenerator } from './report-generator.js';
@@ -151,25 +152,46 @@ yargs(hideBin(process.argv))
       // Analyze all discovered URLs
       const reportGenerator = new SEOReportGenerator();
 
-      for (const url of urls) {
-        console.log(`\n--- Analyzing: ${url} ---`);
-        try {
-          const result = await evaluateUrl(url);
-          reportGenerator.addResult(result);
-        } catch (error) {
-          console.error(`Error analyzing URL ${url}:`, error);
-          reportGenerator.addResult({
-            url,
-            tests: [
-              {
-                title: 'Analysis Error',
-                state: 'failed',
-                error: `Error analyzing URL: ${error}`,
-              },
-            ],
-            timestamp: new Date().toISOString(),
+      // Launch browser once for all evaluations
+      const browser = await puppeteer.launch();
+
+      try {
+        // Run evaluations in parallel with a concurrency limit
+        const concurrencyLimit = 5; // Adjust based on your needs
+        const results = [];
+
+        for (let i = 0; i < urls.length; i += concurrencyLimit) {
+          const batch = urls.slice(i, i + concurrencyLimit);
+
+          const batchPromises = batch.map(async url => {
+            console.log(`\n--- Analyzing: ${url} ---`);
+            try {
+              const result = await evaluateUrl(url, browser);
+              reportGenerator.addResult(result);
+              return result;
+            } catch (error) {
+              console.error(`Error analyzing URL ${url}:`, error);
+              const errorResult = {
+                url,
+                tests: [
+                  {
+                    title: 'Analysis Error',
+                    state: 'failed' as const,
+                    error: `Error analyzing URL: ${error}`,
+                  },
+                ],
+                timestamp: new Date().toISOString(),
+              };
+              reportGenerator.addResult(errorResult);
+              return errorResult;
+            }
           });
+
+          await Promise.all(batchPromises);
         }
+      } finally {
+        // Always close the browser
+        await browser.close();
       }
 
       // Generate the HTML report

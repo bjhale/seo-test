@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import puppeteer, { Browser } from 'puppeteer';
 import * as cheerio from 'cheerio';
 import { writeFileSync } from 'fs';
 import { join } from 'path';
@@ -14,11 +14,10 @@ interface EvaluationResult {
   timestamp: string;
 }
 
-export default async function evaluateUrl(url: string): Promise<EvaluationResult> {
+export default async function evaluateUrl(url: string, browser: Browser): Promise<EvaluationResult> {
   const tests: SEOTest[] = [];
   const timestamp = new Date().toISOString();
 
-  const browser = await puppeteer.launch();
   const page = await browser.newPage();
 
   const response = await page.goto(url, {
@@ -28,7 +27,7 @@ export default async function evaluateUrl(url: string): Promise<EvaluationResult
 
   if (!response || !response.ok()) {
     console.error(`Failed to load page: ${url}`);
-    await browser.close();
+    await page.close();
     return {
       url,
       tests: [
@@ -69,7 +68,7 @@ export default async function evaluateUrl(url: string): Promise<EvaluationResult
   const canonicalTests = await testCanonicalLink(page, $);
   tests.push(...canonicalTests);
 
-  await browser.close();
+  await page.close();
 
   return {
     url,
