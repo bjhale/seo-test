@@ -58,6 +58,7 @@ interface Arguments {
   maxUrls?: number;
   file?: string;
   stdin?: boolean;
+  concurrency?: number;
 }
 
 yargs(hideBin(process.argv))
@@ -100,6 +101,12 @@ yargs(hideBin(process.argv))
           describe: 'Read URLs from stdin (one URL per line)',
           type: 'boolean',
           default: false,
+        })
+        .option('concurrency', {
+          alias: 'p',
+          describe: 'Maximum number of parallel executions',
+          type: 'number',
+          default: 5,
         });
     },
     async (argv: Arguments) => {
@@ -157,7 +164,7 @@ yargs(hideBin(process.argv))
 
       try {
         // Run evaluations in parallel with a concurrency limit
-        const concurrencyLimit = 5; // Adjust based on your needs
+        const concurrencyLimit = argv.concurrency || 5;
         const results = [];
 
         for (let i = 0; i < urls.length; i += concurrencyLimit) {
