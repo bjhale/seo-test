@@ -93,16 +93,24 @@ export default async function evaluateUrl(
         elementScreenshotDataUrl = `data:image/png;base64,${elementScreenshot}`;
       } catch (screenshotError) {
         console.warn(`Could not take screenshot of H1 element ${i + 1}: ${screenshotError}`);
-        // Fall back to the full page screenshot
-        elementScreenshotDataUrl = screenshotDataUrl;
+        // No screenshot will be included
+        elementScreenshotDataUrl = null;
       }
 
-      tests.push({
+      const testResult: any = {
         title: `H1 Tag ${i + 1} of ${h1Count}: "${h1Element.text}"`,
         state: 'failed',
         error: `Multiple H1 tags found. This is H1 #${i + 1}: "${h1Element.text}". There should only be one H1 tag per page.`,
-        screenshot: elementScreenshotDataUrl,
-      });
+      };
+
+      // Only add screenshot if we successfully captured one
+      if (elementScreenshotDataUrl) {
+        testResult.screenshot = elementScreenshotDataUrl;
+      } else {
+        testResult.error += ' No screenshot available for this H1 tag.';
+      }
+
+      tests.push(testResult);
     }
 
     console.error(`Error: Found ${h1Count} H1 tags on the page. There should only be one.`);
@@ -149,16 +157,22 @@ export default async function evaluateUrl(
         elementScreenshotDataUrl = `data:image/png;base64,${elementScreenshot}`;
       } catch (screenshotError) {
         console.warn(`Could not take screenshot of out of order heading ${i + 1}: ${screenshotError}`);
-        // Fall back to the full page screenshot
-        elementScreenshotDataUrl = screenshotDataUrl;
+        // No screenshot will be included
+        elementScreenshotDataUrl = null;
       }
 
-      tests.push({
+      const testResult: any = {
         title: `Out of Order Heading ${i + 1} of ${outOfOrder.length}: ${outOfOrderHeading.tag} "${outOfOrderHeading.text}"`,
         state: 'failed',
         error: `Out of order heading found: ${outOfOrderHeading.tag} "${outOfOrderHeading.text}". Headings should follow a logical hierarchy (H1 > H2 > H3, etc.) without skipping levels.`,
-        screenshot: elementScreenshotDataUrl,
-      });
+      };
+
+      // Only add screenshot if we successfully captured one
+      if (elementScreenshotDataUrl) {
+        testResult.screenshot = elementScreenshotDataUrl;
+      }
+
+      tests.push(testResult);
     }
 
     console.error('Error: Found out of order headings.');
