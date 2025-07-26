@@ -57,6 +57,8 @@ export async function crawlSite(startUrl: string, options: CrawlOptions = {}): P
         if (maxUrls !== Infinity && urls.size >= maxUrls) {
           console.log(`Reached maximum URL limit of ${maxUrls}. Stopping crawler.`);
           crawler.stop();
+          resolve(Array.from(urls));
+          return;
         }
       }
     });
