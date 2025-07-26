@@ -1,0 +1,63 @@
+{
+  "name": "seo-test",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "bin": {
+    "seo-test": "./dist/main.js"
+  },
+  "scripts": {
+    "start": "node dist/main.js",
+    "start:dev": "tsx ./src/main.ts",
+    "build": "tsc --project tsconfig.build.json",
+    "build:clean": "rm -rf tsconfig.build.tsbuildinfo && rm -rf ./dist",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --detectOpenHandles",
+    "test:coverage": "npm run test -- --coverage",
+    "test:ci": "npm run test -- --colors --coverage --ci",
+    "lint": "eslint --ext .ts,.js .",
+    "format": "prettier \"./**\" --write --ignore-unknown",
+    "format:check": "prettier \"./**\" --ignore-unknown --check"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "cheerio": "^1.1.0",
+    "dotenv": "^17.2.1",
+    "mochawesome-report-generator": "^6.2.0",
+    "puppeteer": "^24.15.0",
+    "simplecrawler": "^1.1.9",
+    "tslib": "^2.8.1",
+    "tsx": "^4.20.3",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@jest/globals": "^30.0.5",
+    "@jest/types": "^30.0.5",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.1.0",
+    "@types/simplecrawler": "^1.1.5",
+    "@types/supertest": "^6.0.3",
+    "@types/yargs": "^17.0.33",
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/parser": "^8.38.0",
+    "cross-env": "^10.0.0",
+    "eslint": "^9.32.0",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-tsdoc": "^0.4.0",
+    "husky": "^9.1.7",
+    "jest": "^30.0.5",
+    "lint-staged": "^16.1.2",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.6.2",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "volta": {
+    "node": "22.17.1"
+  }
+}
