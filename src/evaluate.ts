@@ -69,15 +69,47 @@ export default async function evaluateUrl(
   // Check for multiple H1 tags
   const h1Count = headingStructure.filter(h => h.tag === 'H1').length;
   if (h1Count > 1) {
-    const h1Tags = headingStructure.filter(h => h.tag === 'H1').map(h => h.text);
-    tests.push({
-      title: 'Single H1 Tag',
-      state: 'failed',
-      error: `Found ${h1Count} H1 tags on the page. There should only be one. H1 tags found: ${h1Tags.join(', ')}`,
-      screenshot: screenshotDataUrl,
-    });
+    const h1Tags = headingStructure.filter(h => h.tag === 'H1');
+
+    // Take individual screenshots of each H1 tag
+    for (let i = 0; i < h1Tags.length; i++) {
+      const h1Element = h1Tags[i];
+      let elementScreenshotDataUrl = null;
+
+      try {
+        // Scroll the element into view and take a screenshot
+        await page.evaluate(el => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, h1Element.element);
+
+        // Wait a moment for scroll to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Take screenshot of the element with some context
+        const elementScreenshot = await h1Element.element.screenshot({
+          encoding: 'base64',
+          type: 'png',
+        });
+        elementScreenshotDataUrl = `data:image/png;base64,${elementScreenshot}`;
+      } catch (screenshotError) {
+        console.warn(`Could not take screenshot of H1 element ${i + 1}: ${screenshotError}`);
+        // Fall back to the full page screenshot
+        elementScreenshotDataUrl = screenshotDataUrl;
+      }
+
+      tests.push({
+        title: `H1 Tag ${i + 1} of ${h1Count}: "${h1Element.text}"`,
+        state: 'failed',
+        error: `Multiple H1 tags found. This is H1 #${i + 1}: "${h1Element.text}". There should only be one H1 tag per page.`,
+        screenshot: elementScreenshotDataUrl,
+      });
+    }
+
     console.error(`Error: Found ${h1Count} H1 tags on the page. There should only be one.`);
-    console.error('H1 tags found:', h1Tags);
+    console.error(
+      'H1 tags found:',
+      h1Tags.map(h => h.text),
+    );
   } else {
     tests.push({
       title: 'Single H1 Tag',
@@ -95,13 +127,40 @@ export default async function evaluateUrl(
   });
 
   if (outOfOrder.length > 0) {
-    const outOfOrderTitles = outOfOrder.map(h => `${h.tag}: ${h.text}`);
-    tests.push({
-      title: 'Heading Order',
-      state: 'failed',
-      error: `Found out of order headings: ${outOfOrderTitles.join(', ')}`,
-      screenshot: screenshotDataUrl,
-    });
+    // Take individual screenshots of each out of order heading
+    for (let i = 0; i < outOfOrder.length; i++) {
+      const outOfOrderHeading = outOfOrder[i];
+      let elementScreenshotDataUrl = null;
+
+      try {
+        // Scroll the element into view and take a screenshot
+        await page.evaluate(el => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, outOfOrderHeading.element);
+
+        // Wait a moment for scroll to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Take screenshot of the element with some context
+        const elementScreenshot = await outOfOrderHeading.element.screenshot({
+          encoding: 'base64',
+          type: 'png',
+        });
+        elementScreenshotDataUrl = `data:image/png;base64,${elementScreenshot}`;
+      } catch (screenshotError) {
+        console.warn(`Could not take screenshot of out of order heading ${i + 1}: ${screenshotError}`);
+        // Fall back to the full page screenshot
+        elementScreenshotDataUrl = screenshotDataUrl;
+      }
+
+      tests.push({
+        title: `Out of Order Heading ${i + 1} of ${outOfOrder.length}: ${outOfOrderHeading.tag} "${outOfOrderHeading.text}"`,
+        state: 'failed',
+        error: `Out of order heading found: ${outOfOrderHeading.tag} "${outOfOrderHeading.text}". Headings should follow a logical hierarchy (H1 > H2 > H3, etc.) without skipping levels.`,
+        screenshot: elementScreenshotDataUrl,
+      });
+    }
+
     console.error('Error: Found out of order headings.');
     console.error('Out of Order Headings:', outOfOrder);
   } else {
