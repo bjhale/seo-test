@@ -42,9 +42,13 @@ export default async function evaluateUrl(
     };
   }
 
-  // Take screenshot for the page
-  const screenshotPath = `${screenshotDir}/${encodeURIComponent(url)}-${Date.now()}.png`;
-  await page.screenshot({ path: screenshotPath as `${string}.png`, fullPage: true });
+  // Take screenshot as base64
+  const screenshotBase64 = await page.screenshot({
+    encoding: 'base64',
+    fullPage: true,
+    type: 'png',
+  });
+  const screenshotDataUrl = `data:image/png;base64,${screenshotBase64}`;
 
   const $ = cheerio.load(await response?.text());
 
@@ -70,7 +74,7 @@ export default async function evaluateUrl(
       title: 'Single H1 Tag',
       state: 'failed',
       error: `Found ${h1Count} H1 tags on the page. There should only be one. H1 tags found: ${h1Tags.join(', ')}`,
-      screenshot: screenshotPath,
+      screenshot: screenshotDataUrl,
     });
     console.error(`Error: Found ${h1Count} H1 tags on the page. There should only be one.`);
     console.error('H1 tags found:', h1Tags);
@@ -96,7 +100,7 @@ export default async function evaluateUrl(
       title: 'Heading Order',
       state: 'failed',
       error: `Found out of order headings: ${outOfOrderTitles.join(', ')}`,
-      screenshot: screenshotPath,
+      screenshot: screenshotDataUrl,
     });
     console.error('Error: Found out of order headings.');
     console.error('Out of Order Headings:', outOfOrder);
@@ -114,7 +118,6 @@ export default async function evaluateUrl(
       title: 'Canonical Link Present',
       state: 'failed',
       error: 'No canonical link found on the page',
-      screenshot: screenshotPath,
     });
     console.error('Error: No canonical link found on the page.');
   } else {
@@ -133,7 +136,6 @@ export default async function evaluateUrl(
       title: 'Canonical Link Absolute',
       state: 'failed',
       error: `Canonical link is not absolute: ${canonicalHref}`,
-      screenshot: screenshotPath,
     });
     console.error('Error: Canonical link is not absolute:', canonicalHref);
   } else if (canonicalHref) {
@@ -149,7 +151,6 @@ export default async function evaluateUrl(
       title: 'Canonical Link HTTPS',
       state: 'failed',
       error: `Canonical link is using http instead of https: ${canonicalHref}`,
-      screenshot: screenshotPath,
     });
     console.error('Error: Canonical link is using http instead of https:', canonicalHref);
   } else if (canonicalHref) {
@@ -166,7 +167,7 @@ export default async function evaluateUrl(
   return {
     url,
     tests,
-    screenshot: screenshotPath,
+    screenshot: screenshotDataUrl,
     timestamp,
   };
 }
