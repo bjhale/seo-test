@@ -3,7 +3,16 @@ import { SEOTest } from '../report-generator.js';
 import { takeElementScreenshot } from '../utilities/screenshot.js';
 import { HeadingStructure } from './types.js';
 
-export async function testHeadingOrder(page: Page, headingStructure: HeadingStructure[]): Promise<SEOTest[]> {
+interface Logger {
+  log: (message: string) => void;
+  error: (message: string) => void;
+}
+
+export async function testHeadingOrder(
+  page: Page,
+  headingStructure: HeadingStructure[],
+  logger?: Logger,
+): Promise<SEOTest[]> {
   const tests: SEOTest[] = [];
 
   // Check for out of order headings
@@ -37,11 +46,18 @@ export async function testHeadingOrder(page: Page, headingStructure: HeadingStru
       tests.push(testResult);
     }
 
-    console.error('Error: Found out of order headings.');
-    console.error(
-      'Out of Order Headings:',
-      outOfOrder.map(h => `${h.tag}: "${h.text || ''}"`),
-    );
+    const message1 = 'Error: Found out of order headings.';
+    const message2 = 'Out of Order Headings: ' + outOfOrder.map(h => `${h.tag}: "${h.text || ''}"`).join(', ');
+    if (logger) {
+      logger.error(message1);
+      logger.error(message2);
+    } else {
+      console.error(message1);
+      console.error(
+        'Out of Order Headings:',
+        outOfOrder.map(h => `${h.tag}: "${h.text || ''}"`),
+      );
+    }
   } else {
     tests.push({
       title: 'Heading Order',

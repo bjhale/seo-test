@@ -171,13 +171,27 @@ yargs(hideBin(process.argv))
           const batch = urls.slice(i, i + concurrencyLimit);
 
           const batchPromises = batch.map(async url => {
-            console.log(`\n--- Analyzing: ${url} ---`);
+            // Create a logger to buffer output for this URL
+            const outputBuffer: string[] = [];
+            const logger = {
+              log: (message: string) => outputBuffer.push(`[LOG] ${message}`),
+              error: (message: string) => outputBuffer.push(`[ERROR] ${message}`),
+            };
+
             try {
-              const result = await evaluateUrl(url, browser);
+              const result = await evaluateUrl(url, browser, logger);
               reportGenerator.addResult(result);
+
+              // Output buffered logs for this URL
+              console.log(`\n--- Analysis Results for: ${url} ---`);
+              outputBuffer.forEach(line => console.log(line));
+
               return result;
             } catch (error) {
-              console.error(`Error analyzing URL ${url}:`, error);
+              console.error(`\n--- Analysis Results for: ${url} ---`);
+              console.error(`[ERROR] Error analyzing URL ${url}: ${error}`);
+              outputBuffer.forEach(line => console.log(line));
+
               const errorResult = {
                 url,
                 tests: [

@@ -14,7 +14,12 @@ interface EvaluationResult {
   timestamp: string;
 }
 
-export default async function evaluateUrl(url: string, browser: Browser): Promise<EvaluationResult> {
+interface Logger {
+  log: (message: string) => void;
+  error: (message: string) => void;
+}
+
+export default async function evaluateUrl(url: string, browser: Browser, logger?: Logger): Promise<EvaluationResult> {
   const tests: SEOTest[] = [];
   const timestamp = new Date().toISOString();
 
@@ -26,7 +31,9 @@ export default async function evaluateUrl(url: string, browser: Browser): Promis
   });
 
   if (!response || !response.ok()) {
-    console.error(`Failed to load page: ${url}`);
+    const message = `Failed to load page: ${url}`;
+    if (logger) logger.error(message);
+    else console.error(message);
     await page.close();
     return {
       url,
@@ -59,13 +66,13 @@ export default async function evaluateUrl(url: string, browser: Browser): Promis
   );
 
   // Run all SEO tests
-  const h1Tests = await testMultipleH1Tags(page, headingStructure);
+  const h1Tests = await testMultipleH1Tags(page, headingStructure, logger);
   tests.push(...h1Tests);
 
-  const headingOrderTests = await testHeadingOrder(page, headingStructure);
+  const headingOrderTests = await testHeadingOrder(page, headingStructure, logger);
   tests.push(...headingOrderTests);
 
-  const canonicalTests = await testCanonicalLink(page, $);
+  const canonicalTests = await testCanonicalLink(page, $, logger);
   tests.push(...canonicalTests);
 
   await page.close();

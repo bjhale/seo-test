@@ -3,7 +3,16 @@ import { SEOTest } from '../report-generator.js';
 import { takeElementScreenshot } from '../utilities/screenshot.js';
 import { HeadingStructure } from './types.js';
 
-export async function testMultipleH1Tags(page: Page, headingStructure: HeadingStructure[]): Promise<SEOTest[]> {
+interface Logger {
+  log: (message: string) => void;
+  error: (message: string) => void;
+}
+
+export async function testMultipleH1Tags(
+  page: Page,
+  headingStructure: HeadingStructure[],
+  logger?: Logger,
+): Promise<SEOTest[]> {
   const tests: SEOTest[] = [];
 
   // Check for multiple H1 tags
@@ -34,11 +43,18 @@ export async function testMultipleH1Tags(page: Page, headingStructure: HeadingSt
       tests.push(testResult);
     }
 
-    console.error(`Error: Found ${h1Count} H1 tags on the page. There should only be one.`);
-    console.error(
-      'H1 tags found:',
-      h1Tags.map(h => h.text || ''),
-    );
+    const message1 = `Error: Found ${h1Count} H1 tags on the page. There should only be one.`;
+    const message2 = `H1 tags found: ${JSON.stringify(h1Tags.map(h => h.text || ''))}`;
+    if (logger) {
+      logger.error(message1);
+      logger.error(message2);
+    } else {
+      console.error(message1);
+      console.error(
+        'H1 tags found:',
+        h1Tags.map(h => h.text || ''),
+      );
+    }
   } else {
     tests.push({
       title: 'Single H1 Tag',

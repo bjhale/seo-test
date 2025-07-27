@@ -2,7 +2,12 @@ import { Page } from 'puppeteer';
 import * as cheerio from 'cheerio';
 import { SEOTest } from '../report-generator.js';
 
-export async function testCanonicalLink(page: Page, $: cheerio.CheerioAPI): Promise<SEOTest[]> {
+interface Logger {
+  log: (message: string) => void;
+  error: (message: string) => void;
+}
+
+export async function testCanonicalLink(page: Page, $: cheerio.CheerioAPI, logger?: Logger): Promise<SEOTest[]> {
   const tests: SEOTest[] = [];
 
   // Check for canonical tag
@@ -13,14 +18,18 @@ export async function testCanonicalLink(page: Page, $: cheerio.CheerioAPI): Prom
       state: 'failed',
       error: 'No canonical link found on the page',
     });
-    console.error('Error: No canonical link found on the page.');
+    const message = 'Error: No canonical link found on the page.';
+    if (logger) logger.error(message);
+    else console.error(message);
   } else {
     const canonicalHref = await page.evaluate(el => el.href, canonicalLink);
     tests.push({
       title: 'Canonical Link Present',
       state: 'passed',
     });
-    console.log('Canonical link found:', canonicalHref);
+    const message = `Canonical link found: ${canonicalHref}`;
+    if (logger) logger.log(message);
+    else console.log(message);
   }
 
   // Check for absolute canonical
@@ -31,7 +40,9 @@ export async function testCanonicalLink(page: Page, $: cheerio.CheerioAPI): Prom
       state: 'failed',
       error: `Canonical link is not absolute: ${canonicalHref}`,
     });
-    console.error('Error: Canonical link is not absolute:', canonicalHref);
+    const message = `Error: Canonical link is not absolute: ${canonicalHref}`;
+    if (logger) logger.error(message);
+    else console.error(message);
   } else if (canonicalHref) {
     tests.push({
       title: 'Canonical Link Absolute',
@@ -46,7 +57,9 @@ export async function testCanonicalLink(page: Page, $: cheerio.CheerioAPI): Prom
       state: 'failed',
       error: `Canonical link is using http instead of https: ${canonicalHref}`,
     });
-    console.error('Error: Canonical link is using http instead of https:', canonicalHref);
+    const message = `Error: Canonical link is using http instead of https: ${canonicalHref}`;
+    if (logger) logger.error(message);
+    else console.error(message);
   } else if (canonicalHref) {
     tests.push({
       title: 'Canonical Link HTTPS',
@@ -54,7 +67,9 @@ export async function testCanonicalLink(page: Page, $: cheerio.CheerioAPI): Prom
     });
   }
 
-  console.log('Canonical link: ', canonicalHref);
+  const message = `Canonical link: ${canonicalHref}`;
+  if (logger) logger.log(message);
+  else console.log(message);
 
   return tests;
 }
