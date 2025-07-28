@@ -5,6 +5,7 @@ import { hideBin } from 'yargs/helpers';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import puppeteer from 'puppeteer';
 import evaluateUrl from './evaluate.js';
 import { crawlSite } from './crawler.js';
 import { SEOReportGenerator } from './report-generator.js';
@@ -57,6 +58,7 @@ interface Arguments {
   maxUrls?: number;
   file?: string;
   stdin?: boolean;
+  concurrency?: number;
 }
 
 yargs(hideBin(process.argv))
@@ -99,6 +101,12 @@ yargs(hideBin(process.argv))
           describe: 'Read URLs from stdin (one URL per line)',
           type: 'boolean',
           default: false,
+        })
+        .option('concurrency', {
+          alias: 'p',
+          describe: 'Maximum number of parallel executions',
+          type: 'number',
+          default: 5,
         });
     },
     async (argv: Arguments) => {
@@ -151,25 +159,60 @@ yargs(hideBin(process.argv))
       // Analyze all discovered URLs
       const reportGenerator = new SEOReportGenerator();
 
-      for (const url of urls) {
-        console.log(`\n--- Analyzing: ${url} ---`);
-        try {
-          const result = await evaluateUrl(url);
-          reportGenerator.addResult(result);
-        } catch (error) {
-          console.error(`Error analyzing URL ${url}:`, error);
-          reportGenerator.addResult({
-            url,
-            tests: [
-              {
-                title: 'Analysis Error',
-                state: 'failed',
-                error: `Error analyzing URL: ${error}`,
-              },
-            ],
-            timestamp: new Date().toISOString(),
+      // Launch browser once for all evaluations
+      const browser = await puppeteer.launch();
+
+      try {
+        // Run evaluations in parallel with a concurrency limit
+        const concurrencyLimit = argv.concurrency || 5;
+        const results = [];
+
+        for (let i = 0; i < urls.length; i += concurrencyLimit) {
+          const batch = urls.slice(i, i + concurrencyLimit);
+
+          const batchPromises = batch.map(async url => {
+            // Create a logger to buffer output for this URL
+            const outputBuffer: string[] = [];
+            const logger = {
+              log: (message: string) => outputBuffer.push(`[LOG] ${message}`),
+              error: (message: string) => outputBuffer.push(`[ERROR] ${message}`),
+            };
+
+            try {
+              const result = await evaluateUrl(url, browser, logger);
+              reportGenerator.addResult(result);
+
+              // Output buffered logs for this URL
+              console.log(`\n--- Analysis Results for: ${url} ---`);
+              outputBuffer.forEach(line => console.log(line));
+
+              return result;
+            } catch (error) {
+              console.error(`\n--- Analysis Results for: ${url} ---`);
+              console.error(`[ERROR] Error analyzing URL ${url}: ${error}`);
+              outputBuffer.forEach(line => console.log(line));
+
+              const errorResult = {
+                url,
+                tests: [
+                  {
+                    title: 'Analysis Error',
+                    state: 'failed' as const,
+                    error: `Error analyzing URL: ${error}`,
+                  },
+                ],
+                timestamp: new Date().toISOString(),
+              };
+              reportGenerator.addResult(errorResult);
+              return errorResult;
+            }
           });
+
+          await Promise.all(batchPromises);
         }
+      } finally {
+        // Always close the browser
+        await browser.close();
       }
 
       // Generate the HTML report

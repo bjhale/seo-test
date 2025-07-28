@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import puppeteer, { Browser } from 'puppeteer';
 import * as cheerio from 'cheerio';
 import { writeFileSync } from 'fs';
 import { join } from 'path';
@@ -14,11 +14,15 @@ interface EvaluationResult {
   timestamp: string;
 }
 
-export default async function evaluateUrl(url: string): Promise<EvaluationResult> {
+interface Logger {
+  log: (message: string) => void;
+  error: (message: string) => void;
+}
+
+export default async function evaluateUrl(url: string, browser: Browser, logger?: Logger): Promise<EvaluationResult> {
   const tests: SEOTest[] = [];
   const timestamp = new Date().toISOString();
 
-  const browser = await puppeteer.launch();
   const page = await browser.newPage();
 
   const response = await page.goto(url, {
@@ -27,8 +31,10 @@ export default async function evaluateUrl(url: string): Promise<EvaluationResult
   });
 
   if (!response || !response.ok()) {
-    console.error(`Failed to load page: ${url}`);
-    await browser.close();
+    const message = `Failed to load page: ${url}`;
+    if (logger) logger.error(message);
+    else console.error(message);
+    await page.close();
     return {
       url,
       tests: [
@@ -60,16 +66,16 @@ export default async function evaluateUrl(url: string): Promise<EvaluationResult
   );
 
   // Run all SEO tests
-  const h1Tests = await testMultipleH1Tags(page, headingStructure);
+  const h1Tests = await testMultipleH1Tags(page, headingStructure, logger);
   tests.push(...h1Tests);
 
-  const headingOrderTests = await testHeadingOrder(page, headingStructure);
+  const headingOrderTests = await testHeadingOrder(page, headingStructure, logger);
   tests.push(...headingOrderTests);
 
-  const canonicalTests = await testCanonicalLink(page, $);
+  const canonicalTests = await testCanonicalLink(page, $, logger);
   tests.push(...canonicalTests);
 
-  await browser.close();
+  await page.close();
 
   return {
     url,
